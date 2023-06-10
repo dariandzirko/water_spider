@@ -1,3 +1,5 @@
+use water_spider::run;
+
 fn main() {
-    println!("Hello, world!");
+    pollster::block_on(run());
 }
