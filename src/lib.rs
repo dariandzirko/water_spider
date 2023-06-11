@@ -1,3 +1,4 @@
+use image::imageops::blur;
 use wgpu::util::DeviceExt;
 use winit::{
     dpi::PhysicalSize,
@@ -18,7 +19,7 @@ struct Vertex {
     tex_coords: [f32; 2],
 }
 
-const VERTICES: &[Vertex] = &[
+const FULL_SCREEN_VERTICES: &[Vertex] = &[
     // Changed
     Vertex {
         position: [-1.0, -1.0, 0.0],
@@ -38,7 +39,7 @@ const VERTICES: &[Vertex] = &[
     }, // D
 ];
 
-const INDECES: &[u16] = &[0, 1, 2, 0, 2, 3];
+const FULL_SCREEN_INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
 
 impl Vertex {
     fn desc() -> wgpu::VertexBufferLayout<'static> {
@@ -74,19 +75,13 @@ struct State {
     num_indeces: u32,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
+    compute_pipeline: wgpu::ComputePipeline,
 }
 
 impl State {
     // Creating some of the wgpu types requires async code
     async fn new(window: Window) -> Self {
-        let diffuse_bytes = include_bytes!("Left_Environment_Water.png");
-        let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
-        let diffuse_rgba = diffuse_image.to_rgba8();
-
-        use image::GenericImageView;
-        let dimensions = diffuse_image.dimensions();
-
-        window.set_inner_size(PhysicalSize::new(dimensions.0, dimensions.1));
+        window.set_inner_size(PhysicalSize::new(1024, 604));
 
         let size = window.inner_size();
 
@@ -140,6 +135,7 @@ impl State {
             view_formats: vec![],
         };
         surface.configure(&device, &config);
+
         let diffuse_bytes = include_bytes!("Left_Environment_Water.png");
         let diffuse_texture = texture::Texture::from_bytes(
             &device,
@@ -148,6 +144,84 @@ impl State {
             "Left_Environment_Water.png",
         )
         .unwrap();
+
+        let blur_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("blur_bind_group_layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+
+        let blur_bind_group_layout_1 =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("blur_bind_group_layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::StorageTexture {
+                            access: wgpu::StorageTextureAccess::ReadWrite,
+                            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+
+        let blur_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Blur Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("water.wgsl").into()),
+        });
+
+        let blur_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Blur Pipeline Layout"),
+            bind_group_layouts: &[&blur_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        let blur_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Blur Pipeline"),
+            module: &blur_shader,
+            entry_point: "main",
+            layout: Some(&blur_pipeline_layout),
+        });
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -189,7 +263,7 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("full_screen.wgsl").into()),
         });
 
         let render_pipeline_layout =
@@ -240,17 +314,31 @@ impl State {
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
+            contents: bytemuck::cast_slice(FULL_SCREEN_VERTICES),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
         let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDECES),
+            contents: bytemuck::cast_slice(FULL_SCREEN_INDICES),
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        let num_indeces = INDECES.len() as u32;
+        let blur_params_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("blur_params_buffer"),
+            size: 8,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+            mapped_at_creation: true,
+        });
+
+        let blur_flip_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("blur_flip_buffer"),
+            size: 4,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+            mapped_at_creation: true,
+        });
+
+        let num_indeces = FULL_SCREEN_INDICES.len() as u32;
 
         Self {
             surface,
@@ -265,6 +353,7 @@ impl State {
             num_indeces,
             diffuse_bind_group,
             diffuse_texture,
+            compute_pipeline: blur_pipeline,
         }
     }
 
@@ -303,6 +392,10 @@ impl State {
             });
 
         {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Pass"),
+            });
+
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -326,6 +419,8 @@ impl State {
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indeces, 0, 0..1);
+
+            compute_pass.set_pipeline(&self.compute_pipeline);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
