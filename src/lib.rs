@@ -74,19 +74,14 @@ struct State {
     num_indeces: u32,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
+    diffuse_bind_group_1: wgpu::BindGroup,
+    diffuse_texture_1: texture::Texture,
 }
 
 impl State {
     // Creating some of the wgpu types requires async code
     async fn new(window: Window) -> Self {
-        let diffuse_bytes = include_bytes!("Left_Environment_Water.png");
-        let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
-        let diffuse_rgba = diffuse_image.to_rgba8();
-
-        use image::GenericImageView;
-        let dimensions = diffuse_image.dimensions();
-
-        window.set_inner_size(PhysicalSize::new(dimensions.0, dimensions.1));
+        window.set_inner_size(PhysicalSize::new(1024, 604));
 
         let size = window.inner_size();
 
@@ -140,11 +135,17 @@ impl State {
             view_formats: vec![],
         };
         surface.configure(&device, &config);
-        let diffuse_bytes = include_bytes!("Left_Environment_Water.png");
-        let diffuse_texture = texture::Texture::from_bytes(
+
+        let diffuse_water_bytes = include_bytes!("water_normal.png");
+        let diffuse_water_texture =
+            texture::Texture::from_bytes(&device, &queue, diffuse_water_bytes, "water_normal.png")
+                .unwrap();
+
+        let diffuse_background_bytes = include_bytes!("Left_Environment_Water.png");
+        let diffuse_background_texture = texture::Texture::from_bytes(
             &device,
             &queue,
-            diffuse_bytes,
+            diffuse_background_bytes,
             "Left_Environment_Water.png",
         )
         .unwrap();
@@ -172,30 +173,45 @@ impl State {
                 ],
             });
 
-        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let diffuse_water_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &texture_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                    resource: wgpu::BindingResource::TextureView(&diffuse_water_texture.view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                    resource: wgpu::BindingResource::Sampler(&diffuse_water_texture.sampler),
                 },
             ],
-            label: Some("diffuse_bind_group"),
+            label: Some("diffuse_water_bind_group"),
+        });
+
+        let diffuse_background_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&diffuse_background_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&diffuse_background_texture.sampler),
+                },
+            ],
+            label: Some("diffuse_background_bind_group"),
         });
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("fullscreen.wgsl").into()),
         });
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &texture_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -263,8 +279,10 @@ impl State {
             vertex_buffer,
             index_buffer,
             num_indeces,
-            diffuse_bind_group,
-            diffuse_texture,
+            diffuse_bind_group: diffuse_background_bind_group,
+            diffuse_texture: diffuse_background_texture,
+            diffuse_bind_group_1: diffuse_water_bind_group,
+            diffuse_texture_1: diffuse_water_texture,
         }
     }
 
@@ -323,6 +341,7 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.diffuse_bind_group_1, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indeces, 0, 0..1);
