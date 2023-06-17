@@ -23,19 +23,19 @@ const VERTICES: &[Vertex] = &[
     // Changed
     Vertex {
         position: [-1.0, -1.0, 0.0],
-        tex_coords: [1.0, 1.0],
+        tex_coords: [0.0, 1.0],
     }, // A
     Vertex {
         position: [1.0, -1.0, 0.0],
-        tex_coords: [0.0, 1.0],
+        tex_coords: [1.0, 1.0],
     }, // B
     Vertex {
         position: [1.0, 1.0, 0.0],
-        tex_coords: [0.0, 0.0],
+        tex_coords: [1.0, 0.0],
     }, // C
     Vertex {
         position: [-1.0, 1.0, 0.0],
-        tex_coords: [1.0, 0.0],
+        tex_coords: [0.0, 0.0],
     }, // D
 ];
 
