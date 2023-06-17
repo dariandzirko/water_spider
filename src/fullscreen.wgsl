@@ -44,10 +44,11 @@ var water_s_diffuse: sampler;
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let baseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     let waterColor = textureSample(water_t_diffuse, water_s_diffuse, in.tex_coords + offset.offset_vector);
-    
-    if in.tex_coords.y > 0.5 {
-        return vec4(waterColor.rgb + baseColor.rbg, 1.0);
+    let offset_water = textureSample(t_diffuse, s_diffuse, (in.tex_coords + (waterColor.rg)*0.01));
+
+    if in.tex_coords.y > 0.7 {
+        return vec4(offset_water);
     } else {
-        return vec4(baseColor.rgb, 1.0);
+        return vec4(baseColor);
     }
 }

@@ -65,11 +65,18 @@ impl Vertex {
 struct WaterStats {
     speed: f32,
     direction: cgmath::Vector2<f32>,
+    x: f32,
+    y: f32,
 }
 
 impl WaterStats {
     fn new(speed: f32, direction: cgmath::Vector2<f32>) -> Self {
-        Self { speed, direction }
+        Self {
+            speed,
+            direction,
+            x: 0.0,
+            y: 0.0,
+        }
     }
 }
 
@@ -84,9 +91,15 @@ impl OffsetUniform {
         Self { offset: [0.0, 0.0] }
     }
 
-    fn update_offset(&mut self, water: &WaterStats) {
-        self.offset =
-            ((cgmath::Vector2::from(self.offset) + water.direction * water.speed) % 1.5).into();
+    fn update_offset(&mut self, water: &mut WaterStats) {
+        water.x = (water.x + water.direction.x * water.speed) % std::f32::consts::TAU;
+        water.y = (water.y + water.direction.y * water.speed) % std::f32::consts::TAU;
+
+        self.offset[0] = ((water.x).sin() + 1.0) / 100.0; // need to normalize to texture coords? but I still think this is wrong
+        self.offset[1] = ((water.y).sin() + 1.0) / 100.0;
+        // self.offset[1] = 0.0;
+
+        // (cgmath::Vector2::from(self.offset) + water.direction * water.speed).into();
     }
 }
 struct State {
@@ -235,7 +248,7 @@ impl State {
             label: Some("diffuse_background_bind_group"),
         });
 
-        let water_stats = WaterStats::new(1.0, Vector2 { x: 1.0, y: 0.0 });
+        let water_stats = WaterStats::new(0.01, Vector2 { x: 1.0, y: 0.0 });
         let offset_uniform = OffsetUniform::new();
 
         let offset_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -377,7 +390,7 @@ impl State {
     }
 
     fn update(&mut self) {
-        self.offset_uniform.update_offset(&self.water_stats);
+        self.offset_uniform.update_offset(&mut self.water_stats);
         self.queue.write_buffer(
             &self.offset_buffer,
             0,
