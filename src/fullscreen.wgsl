@@ -1,3 +1,9 @@
+struct OffsetVector {
+    offset_vector: vec2<f32>,
+};
+@group(2) @binding(0)
+var<uniform> offset: OffsetVector;
+
 // Vertex shader
 
 struct VertexInput {
@@ -37,21 +43,10 @@ var water_s_diffuse: sampler;
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let baseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    let waterColor = textureSample(water_t_diffuse, water_s_diffuse, in.tex_coords);
-    let outputR = baseColor.r + (waterColor.r * offset);
-    let outputG = baseColor.g + (waterColor.g * offset);
-    let outputB = baseColor.b + (waterColor.b * offset);
-
-    // if direction {
-    //     offset = offset + (offset*offset);
-    //     direction = false;
-    // } else {
-    //     offset = offset - (offset*offset);
-    //     direction = true;
-    // }
-
+    let waterColor = textureSample(water_t_diffuse, water_s_diffuse, in.tex_coords + offset.offset_vector);
+    
     if in.tex_coords.y > 0.5 {
-        return vec4(outputR, outputG, outputB, 1.0);
+        return vec4(waterColor.rgb + baseColor.rbg, 1.0);
     } else {
         return vec4(baseColor.rgb, 1.0);
     }

@@ -1,3 +1,4 @@
+use cgmath::{self, Vector2};
 use wgpu::util::DeviceExt;
 use winit::{
     dpi::PhysicalSize,
@@ -61,6 +62,33 @@ impl Vertex {
     }
 }
 
+struct WaterStats {
+    speed: f32,
+    direction: cgmath::Vector2<f32>,
+}
+
+impl WaterStats {
+    fn new(speed: f32, direction: cgmath::Vector2<f32>) -> Self {
+        Self { speed, direction }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct OffsetUniform {
+    offset: [f32; 2],
+}
+
+impl OffsetUniform {
+    fn new() -> Self {
+        Self { offset: [0.0, 0.0] }
+    }
+
+    fn update_offset(&mut self, water: &WaterStats) {
+        self.offset =
+            ((cgmath::Vector2::from(self.offset) + water.direction * water.speed) % 1.5).into();
+    }
+}
 struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -72,10 +100,14 @@ struct State {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indeces: u32,
-    diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: texture::Texture,
-    diffuse_bind_group_1: wgpu::BindGroup,
-    diffuse_texture_1: texture::Texture,
+    background_bind_group: wgpu::BindGroup,
+    background_texture: texture::Texture,
+    water_bind_group: wgpu::BindGroup,
+    water_texture: texture::Texture,
+    water_stats: WaterStats,
+    offset_uniform: OffsetUniform,
+    offset_buffer: wgpu::Buffer,
+    offset_bind_group: wgpu::BindGroup,
 }
 
 impl State {
@@ -203,6 +235,39 @@ impl State {
             label: Some("diffuse_background_bind_group"),
         });
 
+        let water_stats = WaterStats::new(1.0, Vector2 { x: 1.0, y: 0.0 });
+        let offset_uniform = OffsetUniform::new();
+
+        let offset_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[offset_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let offset_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("offset_bind_group_layout"),
+            });
+
+        let offset_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &offset_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: offset_buffer.as_entire_binding(),
+            }],
+            label: Some("offset_bind_group"),
+        });
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("fullscreen.wgsl").into()),
@@ -211,7 +276,11 @@ impl State {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout, &texture_bind_group_layout],
+                bind_group_layouts: &[
+                    &texture_bind_group_layout,
+                    &texture_bind_group_layout,
+                    &offset_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -279,10 +348,14 @@ impl State {
             vertex_buffer,
             index_buffer,
             num_indeces,
-            diffuse_bind_group: diffuse_background_bind_group,
-            diffuse_texture: diffuse_background_texture,
-            diffuse_bind_group_1: diffuse_water_bind_group,
-            diffuse_texture_1: diffuse_water_texture,
+            background_bind_group: diffuse_background_bind_group,
+            background_texture: diffuse_background_texture,
+            water_bind_group: diffuse_water_bind_group,
+            water_texture: diffuse_water_texture,
+            water_stats,
+            offset_uniform,
+            offset_buffer,
+            offset_bind_group,
         }
     }
 
@@ -304,7 +377,12 @@ impl State {
     }
 
     fn update(&mut self) {
-        // remove todo!()
+        self.offset_uniform.update_offset(&self.water_stats);
+        self.queue.write_buffer(
+            &self.offset_buffer,
+            0,
+            bytemuck::cast_slice(&[self.offset_uniform]),
+        );
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -340,8 +418,11 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.diffuse_bind_group_1, &[]);
+
+            render_pass.set_bind_group(0, &self.background_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.water_bind_group, &[]);
+            render_pass.set_bind_group(2, &self.offset_bind_group, &[]);
+
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indeces, 0, 0..1);
