@@ -248,7 +248,7 @@ impl State {
             label: Some("diffuse_background_bind_group"),
         });
 
-        let water_stats = WaterStats::new(0.01, Vector2 { x: 1.0, y: 0.0 });
+        let water_stats = WaterStats::new(0.002, Vector2 { x: -1.0, y: -1.0 });
         let offset_uniform = OffsetUniform::new();
 
         let offset_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -283,7 +283,7 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("fullscreen.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("reflect_water.wgsl").into()),
         });
 
         let render_pipeline_layout =
