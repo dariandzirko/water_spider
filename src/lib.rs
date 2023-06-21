@@ -468,6 +468,9 @@ pub async fn run() {
 
     #[cfg(target_arch = "wasm32")]
     {
+        //NEED TO FIGURE OUT
+        // how do I make this center on the screen and stretch to the resolution size?
+
         // Winit prevents sizing with CSS, so we have to set
         // the size manually when on web.
         use winit::dpi::PhysicalSize;
