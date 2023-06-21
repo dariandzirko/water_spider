@@ -84,11 +84,15 @@ impl WaterStats {
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct OffsetUniform {
     offset: [f32; 2],
+    memory_alignment_offset: [f32; 2], //For memory alignment?
 }
 
 impl OffsetUniform {
     fn new() -> Self {
-        Self { offset: [0.0, 0.0] }
+        Self {
+            offset: [0.0, 0.0],
+            memory_alignment_offset: [0.0, 0.0],
+        }
     }
 
     fn update_offset(&mut self, water: &mut WaterStats) {
@@ -248,7 +252,7 @@ impl State {
             label: Some("diffuse_background_bind_group"),
         });
 
-        let water_stats = WaterStats::new(0.002, Vector2 { x: -1.0, y: -1.0 });
+        let water_stats = WaterStats::new(0.02, Vector2 { x: -1.0, y: -1.0 });
         let offset_uniform = OffsetUniform::new();
 
         let offset_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

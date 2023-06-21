@@ -1,5 +1,6 @@
 struct OffsetVector {
     offset_vector: vec2<f32>,
+    buffer_vector: vec2<f32>,
 };
 @group(2) @binding(0)
 var<uniform> offset: OffsetVector;
@@ -50,7 +51,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let waterColor = textureSample(water_t_diffuse, water_s_diffuse, in.tex_coords + offset.offset_vector);
     
     // let inverse_y = in.tex_coords.y*(-1.0) + 1.0;
-    let water_offset_y = waterColor.g*0.01;
     //let reflect_y_coord = inverse_y + water_offset_y;
     
     // let offset_reflection_base = textureSample(t_diffuse, s_diffuse,(in.tex_coords*(-1.0)) + 1.0); // this works?
