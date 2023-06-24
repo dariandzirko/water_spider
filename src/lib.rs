@@ -65,17 +65,19 @@ impl Vertex {
 struct WaterStats {
     speed: f32,
     direction: cgmath::Vector2<f32>,
-    x: f32,
-    y: f32,
+    x_counter: f32,
+    y_counter: f32,
+    percentage_amplitude: f32,
 }
 
 impl WaterStats {
-    fn new(speed: f32, direction: cgmath::Vector2<f32>) -> Self {
+    fn new(speed: f32, direction: cgmath::Vector2<f32>, percentage_amplitude: f32) -> Self {
         Self {
             speed,
             direction,
-            x: 0.0,
-            y: 0.0,
+            x_counter: 0.0,
+            y_counter: 0.0,
+            percentage_amplitude,
         }
     }
 }
@@ -84,7 +86,7 @@ impl WaterStats {
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct OffsetUniform {
     offset: [f32; 2],
-    memory_alignment_offset: [f32; 2], //For memory alignment?
+    memory_alignment_offset: [f32; 2], //For memory alignment when compiling to the web. Needs to be aligned by 16bytes
 }
 
 impl OffsetUniform {
@@ -96,16 +98,20 @@ impl OffsetUniform {
     }
 
     fn update_offset(&mut self, water: &mut WaterStats) {
-        water.x = (water.x + water.direction.x * water.speed) % std::f32::consts::TAU;
-        water.y = (water.y + water.direction.y * water.speed) % std::f32::consts::TAU;
+        // These 2 are just counters I am working and binding the range between 0 and either -2pi or 2pi.
+        // Now that I am typing this, this may be why my rates are different on the web versus running locally
+        water.x_counter =
+            (water.x_counter + water.direction.x * water.speed) % std::f32::consts::TAU;
+        water.y_counter =
+            (water.y_counter + water.direction.y * water.speed) % std::f32::consts::TAU;
 
-        self.offset[0] = ((water.x).sin() + 1.0) / 100.0; // need to normalize to texture coords? but I still think this is wrong
-        self.offset[1] = ((water.y).sin() + 1.0) / 100.0;
-        // self.offset[1] = 0.0;
-
-        // (cgmath::Vector2::from(self.offset) + water.direction * water.speed).into();
+        // These coords are going into the 0..1 texture coord space, so I am going to bound them to (2/200 = 1%) * percentage_amplitude
+        // 2 comes from sin going from -1 to 1, + 1, 0 to 2.
+        self.offset[0] = ((water.x_counter).sin() + 1.0) / 200.0 * water.percentage_amplitude;
+        self.offset[1] = ((water.y_counter).sin() + 1.0) / 200.0 * water.percentage_amplitude;
     }
 }
+
 struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -252,7 +258,8 @@ impl State {
             label: Some("diffuse_background_bind_group"),
         });
 
-        let water_stats = WaterStats::new(0.02, Vector2 { x: -1.0, y: -1.0 });
+        // General idea was to have a direction vector to bias the water ripple and speed is prorotional to frequency
+        let water_stats = WaterStats::new(0.02, Vector2 { x: -1.0, y: -1.0 }, 0.5);
         let offset_uniform = OffsetUniform::new();
 
         let offset_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -422,6 +429,7 @@ impl State {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
+                        //Just picked a color for some operation to start
                         load: wgpu::LoadOp::Clear(wgpu::Color {
                             r: 0.1,
                             g: 0.2,
@@ -468,11 +476,6 @@ pub async fn run() {
 
     #[cfg(target_arch = "wasm32")]
     {
-        //NEED TO FIGURE OUT
-        // how do I make this center on the screen and stretch to the resolution size?
-
-        // Winit prevents sizing with CSS, so we have to set
-        // the size manually when on web.
         use winit::dpi::PhysicalSize;
         window.set_inner_size(PhysicalSize::new(1024, 604));
 

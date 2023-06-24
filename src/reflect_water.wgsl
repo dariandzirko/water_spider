@@ -50,13 +50,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let baseColor = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     let waterColor = textureSample(water_t_diffuse, water_s_diffuse, in.tex_coords + offset.offset_vector);
     
+    var intensity_of_water_vals = 0.01;
     // let inverse_y = in.tex_coords.y*(-1.0) + 1.0;
     //let reflect_y_coord = inverse_y + water_offset_y;
     
     // let offset_reflection_base = textureSample(t_diffuse, s_diffuse,(in.tex_coords*(-1.0)) + 1.0); // this works?
     // let offset_reflection_base = textureSample(t_diffuse, s_diffuse,(1.0 - in.tex_coords); // this does not work?
     // let offset_reflection_base = textureSample(t_diffuse, s_diffuse,(in.tex_coords*(1.0,-1.0) + (0.0,1.0))); //this does not work -_-
-    let offset_reflection_base = textureSample(t_diffuse, s_diffuse,(in.tex_coords*flip_y + flip_y_part2)+waterColor.rg*0.01); //this works? but I need the constants defined outside the function
+    let offset_reflection_base = textureSample(t_diffuse, s_diffuse,(in.tex_coords*flip_y + flip_y_part2)+waterColor.rg*intensity_of_water_vals); //this works? but I need the constants defined outside the function
 
     if in.tex_coords.y > 0.69 {
         return vec4(offset_reflection_base);
