@@ -1,0 +1,14 @@
+#wasm-example {
+    display: flex;
+    justify-content: center;
+
+}
+
+div#wasm-example>canvas {
+    height: auto !important;
+    width: 80% !important;
+}
+
+* {
+    box-sizing: border-box
+}

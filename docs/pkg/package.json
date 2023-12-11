@@ -1,0 +1,14 @@
+{
+  "name": "water_spider",
+  "version": "0.1.0",
+  "files": [
+    "water_spider_bg.wasm",
+    "water_spider.js",
+    "water_spider.d.ts"
+  ],
+  "module": "water_spider.js",
+  "types": "water_spider.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
