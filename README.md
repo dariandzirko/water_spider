@@ -14,17 +14,15 @@ There are 2 sides to the code of the project, Rust and WebGPU Shading Language. 
 ### What is the Animation Really
 ---
 
-<figure>
-    <img align="center" 
-         src="/src/Left_Environment_Water.png"
+<figure align="center">
+    <img src="/src/Left_Environment_Water.png"
          alt="Background Image"
          width = 500>
     <figcaption>The background image of the animation.</figcaption>
 </figure>
 
-<figure>
-    <img align="center"
-         src="/src/water_normal.png"
+<figure align="center">
+    <img src="/src/water_normal.png"
          alt="Texture Image">
     <figcaption>The texture image used in the animation</figcaption>
 </figure>
