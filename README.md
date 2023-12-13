@@ -14,6 +14,12 @@ There are 2 sides to the code of the project, Rust and WebGPU Shading Language. 
 ### What is the Animation Really
 ---
 
+<figure>
+    <img src="/src/Left_Environment_Water.png"
+         alt="Background Image">
+    <figcaption>A single track trail outside of Albuquerque, New Mexico.</figcaption>
+</figure>
+
 ![texture](https://github.com/dariandzirko/water_spider/blob/main/src/water_normal.png)
 
 ![background](https://github.com/dariandzirko/water_spider/blob/main/src/Left_Environment_Water.png)
