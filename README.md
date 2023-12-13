@@ -16,17 +16,19 @@ There are 2 sides to the code of the project, Rust and WebGPU Shading Language. 
 
 <div align="center">
 
-#### Background
 
 <p align="center">
   <img width="460" height="300" src="/src/Left_Environment_Water.png">
 </p>
 
-#### Texture
+#### Background
 
 <p align="center">
   <img src="/src/water_normal.png">
 </p>
+
+#### Texture
+
 
 </div>
 
