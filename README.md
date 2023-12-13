@@ -16,6 +16,7 @@ There are 2 sides to the code of the project, Rust and WebGPU Shading Language. 
 
 <p align="center">
   <img width="460" height="300" src="/src/Left_Environment_Water.png">
+      <figcaption>Background Image</figcaption>
 </p>
 
 <figure >
