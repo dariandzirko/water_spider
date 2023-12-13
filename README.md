@@ -15,14 +15,12 @@ There are 2 sides to the code of the project, Rust and WebGPU Shading Language. 
 ---
 
 <p align="center">
-  <img width="460" height="300" src="/src/Left_Environment_Water.png" alt="Please work">
+  <img width="460" height="300" src="/src/Left_Environment_Water.png">
 </p>
 
-<figure >
-    <img src="/src/water_normal.png"
-         alt="Texture Image">
-    <figcaption>The texture image used in the animation</figcaption>
-</figure>
+<p align="center">
+  <img width="460" height="300" src="/src/water_normal.png">
+</p>
 
 The animation is a function taking this background image with this texture picture and mixing them together with changes every time step. With more detail, the ripple effect in the animation is a pixel coordinate in the flipped region (bottom 30% of the background image) and offsetting it with an rgb (r for x and g for y) value from the texture image. All of which is scaled by a constant which determines the intensity of the ripple. The exact pixel that is chosen from the texture, to manipulate the reflected texture is determined by a offset vector that is maintained in rust. That offset vector is a counter (x and y counter) where I then take the sin of that counter value and normalize between 0 and 1. This just leads to a periodic time dependent counter which will just make the animation repeat, every so often. Wrapping this all up there is a counter repeating between 0 and 1, that influences the selection of pixel value who's r and g channel will change the selected pixel value to display. It is just fancy circle that makes displaying ripples in the pixelated simple.
 
