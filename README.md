@@ -9,7 +9,7 @@ This a Rust plus WebGPU based 2D water animation project all compiled to Web Ass
 ## Details 
 ---
 
-There are 2 sides to the code of the project, Rust and WebGPU Shading Language. The Rust code is doing the set up work and then keeping track of state. Rust starts this off by initializing the window. Then leveraging the wgpu crate to create and maintain all the structs needed for communicating to the shader language (WGSL), and handling the state of those previously mentioned structs and persistently changing data for the animation. The WGSL is shader language that Web GPU uses to express the buffer data to the GPU. All of this gets compiled to WASM from the link above on github pages.
+There are 2 sides to the code of the project, Rust and WebGPU Shading Language. The Rust code is doing the set up work and then keeping track of state. Rust starts this off by initializing the window. Then leveraging the wgpu crate to create and maintain all the structs needed for communicating to the shader language (WGSL), and handling the state of those previously mentioned structs and persistently changing data for the animation. The WGSL is shader language that Web GPU uses to express the buffer data to the GPU. All of this gets compiled to WASM which can be viewed at the link above on github pages.
 
 ### Images Used
 ---
